@@ -21,6 +21,15 @@ attributes:
     min: 1
     max: 96
     step: 1
+  num_gpus:
+    label: "Number of GPUs"
+    widget: "number_field"
+    required: "True"
+    value: "1"
+    min: 1
+    max: 4
+    step: 1
+
   bc_queue: build
 #  additional_modules:
 #    widget: text_field
