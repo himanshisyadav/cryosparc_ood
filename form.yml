@@ -30,7 +30,7 @@ attributes:
     max: 4
     step: 1
 
-  bc_queue: build
+  # bc_queue: build
 #  additional_modules:
 #    widget: text_field
 #    label: "Additional Modules"
