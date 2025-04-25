@@ -1,0 +1,102 @@
+#TO DO:
+#1. GPU type when parition 
+#2. Set up cryosparc master port dynamically or keep it unique for each user and pick it from a database (don't ask user)
+
+
+<% accounts = OOD_ACCOUNTS %>
+
+---
+title: "CryoSPARC"
+cluster: "midway3"
+
+attributes:
+  desktop: "xfce"
+  bc_vnc_idle: 0
+  bc_vnc_resolution:
+    required: true
+  node_type: null    
+  account:
+    required: true
+    label: "Account To Be Charged"
+    widget: "select"
+    options:
+      <% accounts.each do | a | %>
+      - "<%= a %>"
+      <% end %>
+  time:
+    label: "Time (in hours)"
+    widget: "number_field"
+    required: "True"
+    help: "Enter time in mins, current max of 96 hours (4 days)."
+    value: "1"
+    min: 1
+    max: 96
+    step: 1
+  num_gpus:
+    label: "Number of GPUs"
+    widget: "number_field"
+    required: "True"
+    value: "1"
+    min: 1
+    max: 4
+    step: 1
+  partition:
+    label: "Partition"
+    help: "Use beagle3 for GPU jobs and beagle3-bigmem for jobs that do not require GPUs"
+    widget: "select"
+    required: "True"
+    options: 
+      - ["beagle3 (default)", "beagle3"]
+      - ["beagle3-bigmem", "beagle3-bigmem"]
+  gpu_constraint:
+    label: "GPU Type"
+    widget: "select"
+    required: "True"
+    help: "GPU type if beagle3 partition is selected"
+    options:
+    - ["A40 (default)", "a40"]
+    - ["A100", "a100"]
+    when: "partition == 'beagle3'"
+  exclusive:
+    label: "Exclusive Job"
+    widget: "select"
+    required: "True"
+    help: "Is this an exclusive job?"
+    options:
+    - ["Yes", "--exclusive"]
+    - ["No", ""]
+  cryosparc_master_port:
+    label: "CryoSPARC Master Port"
+    required: "True"
+    help: "Please provide the master port assigned to you during account creation"
+    widget: "number_field"
+    value: 39000
+    min: 39100
+    max: 39500
+    step: 10
+
+# bc_queue: build
+#  additional_modules:
+#    widget: text_field
+#    label: "Additional Modules"
+#    value: ""
+#    help: "Enter one or more modules you would like loaded, spelled just like you would with the `module add` command and seperated by a space.
+
+
+#Example: 'cuda/12.0 gcc/11.0.0'
+
+#### NOTE: Currently, if you mispell the module, it will fail to load without an obvious error"
+
+
+form:
+  - bc_vnc_idle
+  - desktop
+  - account
+  - partition
+  - gpu_constraint
+  - num_gpus
+  - time
+  - cryosparc_master_port
+#  - additional_modules
+  - bc_vnc_resolution
+  - bc_email_on_started

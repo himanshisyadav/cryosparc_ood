@@ -18,7 +18,7 @@ cleanup ()
         rm /tmp/mongodb*sock
 
 }
-export PATH=$PATH:/home/users/$USER/cryosparc/$MUID/cryosparc_master/bin
+# export PATH=$PATH:/home/users/$USER/cryosparc/$MUID/cryosparc_master/bin ##Change
 cleanup
 
 

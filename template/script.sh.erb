@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
 
+master_port="<%= context.cryosparc_master_port %>"
+
 # Clean the environment
 module purge
 
-# Set working directory to home directory
-cd "${HOME}"
+# # Set working directory to home directory
+# cd "${HOME}"
 
 # Define basic variables
 master_cmd=cryosparcm
@@ -22,6 +24,7 @@ fi
 if [ $IMUID -lt 2000 ]; then
        export MUID=$(expr $IMUID \* 2 \+ 60000)
 fi
+
 master_port=$MUID
 
 ssd_path="/scratch/$USER/cryosparc_scratch"
