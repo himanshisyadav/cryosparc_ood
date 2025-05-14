@@ -1,57 +1,104 @@
 #!/usr/bin/env bash
 
+master_node="$(hostname -s)"
 master_port="<%= context.cryosparc_master_port %>"
+pi_cnetid="<%= context.pi_account %>"
+user_cnetid="${USER}"
+
+WORKING_DIR="/beagle3/$pi_cnetid/$user_cnetid/cryosparc_$user_cnetid"
+CONFIG_FILE="$WORKING_DIR/master/config.sh"
+TMP_CONFIG_FILE="$WORKING_DIR/master/tmp_config.sh"
+
+num_ports=10
+
+# Function to check if a port is in use
+is_port_in_use() {
+  local host="$1"
+  local port="$2"
+  timeout 0.1 nc -z "$host" "$port" > /dev/null 2>&1
+  return $?
+}
+
+start_port=39100
+
+found=0
+first_port=0
+
+while [ $found -lt 1 ]
+do
+  consecutive_free=0
+  first_port=$start_port
+
+  for ((i=0; i<$num_ports; i++))
+  do
+    port_to_check=$((start_port + i))
+    if ! is_port_in_use "$node" "$port_to_check"; then
+      consecutive_free=$((consecutive_free + 1))
+    else
+      consecutive_free=0
+      start_port=$((port_to_check + 1)) # Move start port after the used one
+    fi
+
+    if [ $consecutive_free -eq $num_ports ]; then
+      found=1
+      break
+    fi
+  done
+
+  start_port=$((start_port + 1)) # Increment start port if not found
+  # Add a safety break to prevent infinite loops (optional, but recommended)
+  if [ $start_port -gt 65535 ]; then
+    echo "Could not find $num_ports consecutive free ports on $node."
+    exit 1
+  fi
+done
+
+if [ $found -eq 1 ]; then
+  echo "$first_port is the master port"
+  master_port=$first_port
+fi
+
+cp $CONFIG_FILE $TMP_CONFIG_FILE
+sed -i "s/CRYOSPARC_MASTER_HOSTNAME=.*/CRYOSPARC_MASTER_HOSTNAME=\"${master_node}.rcc.local\"/" $TMP_CONFIG_FILE
+sed -i "s/CRYOSPARC_BASE_PORT=.*/CRYOSPARC_BASE_PORT=${master_port}/"  $TMP_CONFIG_FILE
+cp -fav $TMP_CONFIG_FILE $CONFIG_FILE
+echo $master_port
+echo $master_node
 
 # Clean the environment
 module purge
+module load rcc/default
 
-# # Set working directory to home directory
-# cd "${HOME}"
+# Set working directory to home directory
+cd "${WORKING_DIR}"
 
 # Define basic variables
 master_cmd=cryosparcm
 worker_cmd=cryosparcw
-# Figure out the port based on uid
-IMUID=$(getent passwd $UID | awk -F: '{print $3}')
-if [ $IMUID -gt 65535 ]; then
-        echo UID $IMUID too big
-        MUID=$(echo "$IMUID % 65535" | bc)
-        # add the mod to the above result so we don't have clashes
-      export MUID=$(expr $MUID + $(expr $IMUID / $MUID))
-else
-        export MUID=$IMUID
-fi
-if [ $IMUID -lt 2000 ]; then
-       export MUID=$(expr $IMUID \* 2 \+ 60000)
-fi
 
-master_port=$MUID
-
-ssd_path="/scratch/$USER/cryosparc_scratch"
-
-module add firefox/110.0
-export PATH=$PATH:/home/users/$USER/cryosparc/$MUID/cryosparc_master/bin
-export PATH=$PATH:/home/users/$USER/cryosparc/$MUID/cryosparc_worker/bin
-
-
+ssd_path="${SLURM_TMPDIR}"
 
 #
 # Launch Xfce Window Manager and Panel
 #
+eval $(dbus-launch --sh-syntax)
 
-(
-  export SEND_256_COLORS_TO_REMOTE=1
-  export XDG_CONFIG_HOME="<%= session.staged_root.join("config") %>"
-  export XDG_DATA_HOME="<%= session.staged_root.join("share") %>"
-  export XDG_CACHE_HOME="$(mktemp -d)"
-  module restore
-  set -x
-  xfwm4 --compositor=off --daemon --sm-client-disable
-  xsetroot -solid "#D3D3D3"
-  xfsettingsd --sm-client-disable
-  xfce4-panel --sm-client-disable
-) &
+export SEND_256_COLORS_TO_REMOTE=1
+export XDG_CONFIG_HOME="<%= session.staged_root.join("config") %>"
+export XDG_DATA_HOME="<%= session.staged_root.join("share") %>"
+export XDG_CACHE_HOME="$(mktemp -d)"
+module restore
+set -x
+export $(dbus-launch)
+#   xfwm4 --compositor=off --daemon --sm-client-disable
+#   xsetroot -solid "#D3D3D3"
+#   xfsettingsd --sm-client-disable
+#   xfce4-panel --sm-client-disable
 
+source /etc/os-release
+export XDG_RUNTIME_DIR="$TMPDIR/xdg_runtime"
+
+xfwm4 --replace &
 
 parse_slurm_nodes () 
 {
@@ -59,12 +106,11 @@ parse_slurm_nodes ()
 #	node_list=($(scontrol show hostnames $SLURM_NODELIST))
 
 	master_bindir=$(dirname $(which cryosparcm))
-	worker_bindir=$(dirname $(which cryosparcw))
-
+	# worker_bindir=$(dirname $(which cryosparcw)) ##Not defined during account creation
 
 	## This is the first/Master node
 	#master_node=${node_list[0]}	
-	master_node="$(hostname)"	
+	# master_node="$(hostname)"	
 
 }
 
@@ -102,8 +148,9 @@ start_master ()
 	fi
 
 	echo "  Starting the Cryosparc Master on $master_node. "
-#	$master_cmd changeport $master_port -y
-#	$master_cmd fixdbport
+	echo $XDG_RUNTIME_DIR
+	$master_cmd changeport $master_port -y
+	$master_cmd fixdbport
 	$master_cmd restart
 	sleep 15
 
@@ -208,11 +255,11 @@ start_cluster ()
 
 	start_master
 
-	cleanup_old_workers
+	# cleanup_old_workers
 
 	prepare_ssd_scratch
 
-	connect_workers
+	# connect_workers
 
 }
 
@@ -233,12 +280,12 @@ cleanup ()
 }
 
 
-
-
 set -x
 trap 'cleanup' SIGINT SIGQUIT SIGTERM SIGKILL
 start_cluster
-firefox --kiosk http://localhost:$MUID/ 2>/dev/null &
+which firefox
+export VGL_DISPLAY=$DISPLAY
+xfce4-terminal -e "firefox --kiosk http://localhost:$master_port/ 2>/dev/null" &
 
 while true; do
 

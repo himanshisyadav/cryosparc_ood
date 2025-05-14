@@ -1,14 +1,13 @@
 #To Do: Adapt this
+<%-
+  args = [ "--partition", "build", "--nodes", "1", "--ntasks-per-node", "1", "--account", "rcc-staff", "--time", "00:20:00"]
+-%>
 ---
 batch_connect:
   template: vnc
-
+  geometry: "1920x1080"
 script:
   native:
-    - "-N"
-    - "1"
-    - "-n"
-    - "40"
-    - "--mem=256G"
-    - "--gres=gpu:1"
-    - "--time=<%= time %>:00:00"
+    <%- args.each do |arg| -%>
+    - "<%= arg %>"
+    <%- end -%>

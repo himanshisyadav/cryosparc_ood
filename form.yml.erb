@@ -3,7 +3,7 @@
 #2. Set up cryosparc master port dynamically or keep it unique for each user and pick it from a database (don't ask user)
 
 
-<% accounts = OOD_ACCOUNTS %>
+# <% accounts = OOD_ACCOUNTS %>
 
 ---
 title: "CryoSPARC"
@@ -15,9 +15,9 @@ attributes:
   bc_vnc_resolution:
     required: true
   node_type: null    
-  account:
+  pi_account:
     required: true
-    label: "Account To Be Charged"
+    label: "PI Account associated with CryoSPARC installation"
     widget: "select"
     options:
       <% accounts.each do | a | %>
@@ -74,7 +74,14 @@ attributes:
     min: 39100
     max: 39500
     step: 10
-
+  cryosparc_master_node:
+    label: "CryoSPARC Master Node"
+    required: "True"
+    help: "Please provide the master node name assigned to you during account creation"
+    widget: "select"
+    options:
+    - ["beagle3-login3", "beagle3-login3"]
+    - ["beagle3-login4", "beagle3-login4"]
 # bc_queue: build
 #  additional_modules:
 #    widget: text_field
@@ -91,12 +98,13 @@ attributes:
 form:
   - bc_vnc_idle
   - desktop
-  - account
+  - pi_account
   - partition
   - gpu_constraint
   - num_gpus
   - time
   - cryosparc_master_port
+  - cryosparc_master_node
 #  - additional_modules
   - bc_vnc_resolution
   - bc_email_on_started
